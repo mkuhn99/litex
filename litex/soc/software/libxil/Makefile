@@ -34,6 +34,22 @@ OBJECTS += cpu_init.o
 %.o: embeddedsw/lib/bsp/standalone/src/arm/cortexa9/gcc/%.S
 	$(assemble)
 
+else
+
+# OBJECTS += cpu_init.o
+OBJECTS = xil_cache.o\
+			outbyte.o\
+			inbyte.o\
+			xuartps_hw.o\
+			xuartps.o\
+			xil_assert.o\
+			xplatform_info.o\
+			xil_printf.o
+
+%.o: embeddedsw/lib/bsp/standalone/src/common/%.c
+	$(compile)
+%.o: embeddedsw/XilinxProcessorIPLib/drivers/uartps/src/%.c
+	$(compile)
 endif
 
 libxil.a: $(OBJECTS)

@@ -306,7 +306,11 @@ def get_csr_header(regions, constants, csr_base=None, with_csr_base_define=True,
                                 r += "\tuint32_t newword = " + field_name + "_replace(oldword, plain_value);\n"
                                 r += "\t" + reg_name + "_write(newword);\n"
                                 r += "}\n"
-
+    r += '''
+#ifdef UART_PS
+#include "uart_ps.h"
+#endif
+'''
     r += "\n#endif\n"
     return r
 

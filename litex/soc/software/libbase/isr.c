@@ -196,11 +196,17 @@ void isr(void)
 	__attribute__((unused)) unsigned int irqs;
 
 	irqs = irq_pending() & irq_getmask();
-
 #ifdef CSR_UART_BASE
 #ifndef UART_POLLING
+#ifdef UART_INTERRUPT
 	if(irqs & (1 << UART_INTERRUPT))
 		uart_isr();
+#endif
+#ifdef UART_PS
+	if(irqs & (1 << PS_UART_INTERRUPT)){
+		ps_isr();
+	}
+#endif
 #endif
 #endif
 }

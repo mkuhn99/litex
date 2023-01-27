@@ -152,6 +152,10 @@ class Zynq7000(CPU):
         if ps7_sdio0_wp_pads is not None:
             self.cpu_params.update(i_SDIO0_WP = ps7_sdio0_wp_pads.wp)
 
+        # IRQ_P2F ----------------------------------------------------------------------------------
+        self.uart1_irq = Signal()
+        self.cpu_params.update(o_IRQ_P2F_UART1 = self.uart1_irq)
+
     def set_ps7_xci(self, xci):
         # Add .xci as Vivado IP and set ps7_name from .xci filename.
         self.ps7_xci  = xci

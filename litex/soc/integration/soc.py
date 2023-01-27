@@ -73,6 +73,8 @@ class SoCRegion:
     def decoder(self, bus):
         origin = self.origin
         size   = self.size_pow2
+        print("ORIGIN: ", hex(self.origin))
+        print("SIZE_POW: ", hex(self.size_pow2))
         if (origin & (size - 1)) != 0:
             self.logger.error("Origin needs to be aligned on size:")
             self.logger.error(self)

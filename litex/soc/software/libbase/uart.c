@@ -28,6 +28,44 @@ static char tx_buf[UART_RINGBUFFER_SIZE_TX];
 static unsigned int tx_produce;
 static volatile unsigned int tx_consume;
 
+#ifdef UART_PS
+
+#include "xuartps_hw.h"
+
+#define XUartPs_IsTransmitEmpty(BaseAddress)			 \
+	((Xil_In32((BaseAddress) + XUARTPS_SR_OFFSET) & 	\
+	(u32)XUARTPS_SR_TXEMPTY) == (u32)XUARTPS_SR_TXEMPTY)
+
+void ps_isr(){
+    if(uart_rxempty_read())
+		XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_ISR_OFFSET, XUARTPS_IXR_RXOVR);
+	if(XUartPs_IsTransmitEmpty(STDOUT_BASEADDRESS))
+        XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_ISR_OFFSET, XUARTPS_IXR_TTRIG);
+
+    unsigned int stat, rx_produce_next;
+
+	stat = XUartPs_ReadReg(STDOUT_BASEADDRESS , XUARTPS_ISR_OFFSET);
+
+	if(stat & XUARTPS_IXR_RXOVR) {
+		while(!uart_rxempty_read()) {
+			rx_produce_next = (rx_produce + 1) & UART_RINGBUFFER_MASK_RX;
+			if(rx_produce_next != rx_consume) {
+				rx_buf[rx_produce] = uart_rxtx_read();
+				rx_produce = rx_produce_next;
+			}
+		}
+	}
+
+	if(stat & XUARTPS_IXR_TTRIG) {
+		uart_ev_pending_write(UART_EV_TX);
+		while((tx_consume != tx_produce) && !uart_txfull_read()) {
+			uart_rxtx_write(tx_buf[tx_consume]);
+			tx_consume = (tx_consume + 1) & UART_RINGBUFFER_MASK_TX;
+		}
+	}
+}
+
+#endif
 void uart_isr(void)
 {
 	unsigned int stat, rx_produce_next;
@@ -90,7 +128,11 @@ void uart_write(char c)
 	}
 
 	oldmask = irq_getmask();
+#ifdef UART_PS
+	//irq_setmask(oldmask & ~(1 << PS_UART_INTERRUPT));
+#else
 	irq_setmask(oldmask & ~(1 << UART_INTERRUPT));
+#endif
 	if((tx_consume != tx_produce) || uart_txfull_read()) {
 		tx_buf[tx_produce] = c;
 		tx_produce = tx_produce_next;
@@ -102,16 +144,41 @@ void uart_write(char c)
 
 void uart_init(void)
 {
+
 	rx_produce = 0;
 	rx_consume = 0;
 
 	tx_produce = 0;
 	tx_consume = 0;
 
+#ifdef UART_PS
+	ps_uart_init();
+#else
 	uart_ev_pending_write(uart_ev_pending_read());
 	uart_ev_enable_write(UART_EV_TX | UART_EV_RX);
 	irq_setmask(irq_getmask() | (1 << UART_INTERRUPT));
+#endif
 }
+#ifdef UART_PS
+void ps_uart_init(){
+	printf("ps_uart_init");
+#ifdef CONFIG_CPU_HAS_INTERRUPT
+    // INIT LITEX INTERRUPT
+	irq_setmask(0);
+	irq_setie(1);
+    static unsigned int mask;
+    mask = irq_getmask();
+    irq_setmask(mask | 1 << PS_UART_INTERRUPT);
+    ps_uart_ev_enable_write(1);
+#endif
+    // INIT PS UART DEVICE
+    static unsigned int tx_int_mask =  XUARTPS_IXR_TTRIG | XUARTPS_IXR_RXOVR;
+	XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_IDR_OFFSET, XUARTPS_IXR_MASK);
+	XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_TXWM_OFFSET, 0x10);
+	XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_RXWM_OFFSET, 0x1);
+    XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_IER_OFFSET, tx_int_mask);
+}
+#endif
 
 void uart_sync(void)
 {

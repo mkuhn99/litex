@@ -203,7 +203,7 @@ void isr(void)
 		uart_isr();
 #endif
 #ifdef UART_PS
-	if(irqs & (1 << PS_UART_INTERRUPT)){
+	if(irqs & (1 << PS_INTERRUPT)){
 		ps_isr();
 	}
 #endif

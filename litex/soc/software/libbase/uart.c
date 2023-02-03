@@ -161,22 +161,21 @@ void uart_init(void)
 }
 #ifdef UART_PS
 void ps_uart_init(){
-	printf("ps_uart_init");
 #ifdef CONFIG_CPU_HAS_INTERRUPT
     // INIT LITEX INTERRUPT
 	irq_setmask(0);
 	irq_setie(1);
     static unsigned int mask;
     mask = irq_getmask();
-    irq_setmask(mask | 1 << PS_UART_INTERRUPT);
-    ps_uart_ev_enable_write(1);
+    irq_setmask(mask | 1 << PS_INTERRUPT);
+    ps_ev_enable_uart_write(1);
 #endif
     // INIT PS UART DEVICE
-    static unsigned int tx_int_mask =  XUARTPS_IXR_TTRIG | XUARTPS_IXR_RXOVR;
+    static unsigned int ps_mask =  XUARTPS_IXR_TTRIG | XUARTPS_IXR_RXOVR;
 	XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_IDR_OFFSET, XUARTPS_IXR_MASK);
 	XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_TXWM_OFFSET, 0x10);
 	XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_RXWM_OFFSET, 0x1);
-    XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_IER_OFFSET, tx_int_mask);
+    XUartPs_WriteReg(STDOUT_BASEADDRESS , XUARTPS_IER_OFFSET, ps_mask);
 }
 #endif
 
